@@ -1,11 +1,13 @@
 using MHLib
 using DataFrames, CSV
+using CUDA
 
 
 #
 # Includes
 #
 include("support_functions.jl")
+include("support_functions_gpu.jl")
 include("OptInstanceTools.jl")
 include("OptLogger.jl")
 
@@ -32,16 +34,17 @@ struct OptInstance{Ti<:Integer, Tf<:AbstractFloat}
     move_k::Ti
     move_mat::Array{Ti,3}
     offset::Vector{Tf}
+    gpu_data::Union{GPUDatasets{Tf}, Nothing}
 end
 
-function generate_move_mat(d_r::Matrix{Float64}, n_r::Int, k::Int)
+function generate_move_mat(d_r::Matrix{Tf}, n_r::Ti, k::Ti) where {Ti<:Integer, Tf<:AbstractFloat}
     # TODO Check if k < n_r-2
 
-    move_mat = Array{Int, 3}(undef, (n_r,n_r,k))
+    move_mat = Array{Ti, 3}(undef, (n_r,n_r,k))
 
     for i in 1:n_r, j in 1:n_r
-        opts = collect(1:n_r)
-        rmv = Vector{Int}()
+        opts = convert.(Ti, collect(1:n_r))
+        rmv = Vector{Ti}()
         for (n,v) in pairs(opts)
             if v == i || v==j
                 push!(rmv,n)
@@ -73,7 +76,14 @@ function OptInstance{Ti, Tf}(filename::String, k::Int=-1) where {Ti<:Integer, Tf
     offset = convert(Vector{Tf}, route_g.nodes.offset)
     #access_time = route_g.nodes.offset
 
-    inst = OptInstance{Ti,Tf}(n_w, n_r, d_w, d_r, copy(d_w), M, links, move_k, move_mat, offset)
+    if CUDA.functional()
+        println("Using GPU")
+        gpu_data = GPUDatasets(d_w, d_w, M, offset)
+    else
+        gpu_data = nothing
+    end
+
+    inst = OptInstance{Ti,Tf}(n_w, n_r, d_w, d_r, copy(d_w), M, links, move_k, move_mat, offset, gpu_data)
     return inst
 end
 
@@ -89,11 +99,12 @@ mutable struct OptSolution{Ti<:Integer, Tf<:AbstractFloat} <: VectorSolution{Ti}
     x::Vector{Ti}
     d::Vector{Tf}
     links::Vector{Ti}
+    use_gpu::Bool
 end
 
 #Define constuctor for inst input
 function OptSolution(inst::OptInstance{Ti, Tf}) where {Ti<:Integer, Tf<:AbstractFloat}
-    return OptSolution{Ti,Tf}(inst, 0, false, 0, Vector{Ti}(), Vector{Tf}(), Vector{Ti}())
+    return OptSolution{Ti,Tf}(inst, 0, false, 0, Vector{Ti}(), Vector{Tf}(), Vector{Ti}(), !isnothing(inst.gpu_data))
 end
 
 function Base.show(io::IO, inst::OptInstance{Ti, Tf})  where {Ti<:Integer, Tf<:AbstractFloat}
@@ -115,11 +126,12 @@ function Base.copy!(s1::OptSolution{Ti,Tf}, s2::OptSolution{Ti,Tf}) where {Ti<:I
     copy!(s1.x, s2.x)                           # Duplicates vectors (allocations?)
     copy!(s1.d, s2.d)
     copy!(s1.links, s2.links)
+    s1.use_gpu = s2.use_gpu
 end
 
 # Does not duplicate the instance, allocates for vectors in solution
 Base.copy(s::OptSolution{Ti,Tf}) where {Ti<:Integer, Tf<:AbstractFloat} =
-    OptSolution{Ti, Tf}(s.inst, s.obj_val, s.obj_val_valid, s.n, copy(s.x), copy(s.d), copy(s.links))
+    OptSolution{Ti, Tf}(s.inst, s.obj_val, s.obj_val_valid, s.n, copy(s.x), copy(s.d), copy(s.links), s.use_gpu)
 
 Base.show(io::IO, s::OptSolution{Ti, Tf}) where {Ti<:Integer, Tf<:AbstractFloat} = 
     print(io, "Obj: $(round(s.obj_val, digits=1)), Len: $(round(sum(s.d),digits=1)), n: $(s.n), Val: $(s.x)")
@@ -157,7 +169,7 @@ function generate_t_matrix(s::OptSolution{Ti,Tf}) where {Ti<:Integer, Tf<:Abstra
     n = length(u_links)  #Convert?
     
     d_t = Array{Tf, 2}(undef, (n,n))
-    fill!(d_t,Inf)
+    fill!(d_t, typemax(Tf)) #fill with Inf of the provided float type
 
     for i in 1:s.n
         src_idx = findfirst(u_links .== s.links[i])
@@ -196,6 +208,10 @@ function MHLib.calc_objective(sol::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<
     if sol.n == 0
         sol.obj_val = compute_obj(sol.inst.d_w, sol.inst.M)
         sol.obj_val_valid = true 
+    elseif sol.use_gpu == true
+        d_t, u_links = generate_t_matrix(sol)
+        sol.obj_val = compute_obj_gpu(sol.inst.gpu_data, CuArray{Tf}(d_t), CuArray{Ti}(u_links))
+        sol.obj_val_valid = true
     else
         d_t, u_links = generate_t_matrix(sol)
         sol.obj_val = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset)
@@ -238,6 +254,26 @@ function is_valid(s::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<:AbstractFloat
     end
 
     return valid
+end
+
+"""
+    check(::Solution; ...)
+
+Check validity of solution.
+
+If a problem is encountered, terminate with an error.
+The default implementation just re-calculates the objective value.
+"""
+function MHLib.check(s::OptSolution{Ti, Tf}; kwargs...)::Nothing where {Ti<:Integer, Tf<:AbstractFloat}
+    if s.obj_val_valid
+        old_obj = s.obj_val
+        invalidate!(s)
+        if !isapprox(old_obj, obj(s); rtol=10^-4)
+            println(typeof(old_obj))
+            println(typeof(obj(s)))
+            error("Solution has wrong objective value: $old_obj, should be $(obj(s))")
+        end
+    end
 end
 
 function MHLib.Log.get_logger(sol::OptSolution)
