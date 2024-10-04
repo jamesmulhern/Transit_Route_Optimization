@@ -2,8 +2,8 @@
 
 # Setup
 inst_name="Winch_Inst_Test"
-max_iters=10                # Mat iterations to run
-print_freq=1                # Logging interval [iterations]
+max_iters=200                # Mat iterations to run
+print_freq=25                # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=50                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
@@ -15,8 +15,10 @@ lim_connect=50              # Limit connections to k nearest stops
 #Compute File Names
 date=$(date '+%Y%m%dT%H%M%S')
 ifile="instances/${inst_name}.zip"
-run_log="results/${date}_run_${inst_name}.log"
-iter_log="results/${date}_iter_${inst_name}.log"
+
+mkdir -p results
+run_log="results/${date}_${inst_name}.log"
+iter_log="results/${date}_${inst_name}.json"
 
 # Generate arg_string
 arg_str=""
@@ -30,6 +32,7 @@ arg_str+=" --dwell_time ${dwell_time}"
 arg_str+=" --max_comb_length ${route_opt_time}"
 arg_str+=" --limit_connections ${lim_connect}"
 arg_str+=" --run_config ${config}"
+arg_str+=" --waiting_time ${waiting_time}"
 
 
-julia -q bin/gvns.jl ${arg_str} > ${run_log}
+julia bin/gvns.jl ${arg_str} > ${run_log}

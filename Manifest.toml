@@ -501,9 +501,9 @@ version = "0.12.171"
 
 [[deps.MHLib]]
 deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "Reexport", "StatsBase"]
-path = "/home/james/.julia/dev/MHLib"
+git-tree-sha1 = "751264f8cc9d76dcc42ef17d60f2988167b5fb0a"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.1.12"
+version = "0.1.13"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
