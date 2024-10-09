@@ -34,4 +34,12 @@ opt_settings_cfg = ArgParseSettings()
     help = "Select a pre-defined configuration for the neighborhood"
     arg_type = Int
     default = 1
+    "--dist_factor"
+    help = "Scale factor to add a penalty term propotional to the route distance"
+    arg_type = Float32
+    default = zero(Float32)
+    "--stop_factor"
+    help = "Scale factor to add a penalty term propotional to the number of stops"
+    arg_type = Float32
+    default = zero(Float32)
 end

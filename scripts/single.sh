@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Setup
-inst_name="Winch_Inst_Test"
-max_iters=200                # Mat iterations to run
-print_freq=25                # Logging interval [iterations]
+inst_name="Winch_Scenario_1"
+max_iters=500               # Mat iterations to run
+print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=50                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
@@ -33,6 +33,8 @@ arg_str+=" --max_comb_length ${route_opt_time}"
 arg_str+=" --limit_connections ${lim_connect}"
 arg_str+=" --run_config ${config}"
 arg_str+=" --waiting_time ${waiting_time}"
+arg_str+=" --dist_factor 0.0"
+arg_str+=" --stop_factor 100.0"
 
 
-julia bin/gvns.jl ${arg_str} > ${run_log}
+julia bin/gvns.jl ${arg_str} >> ${run_log}

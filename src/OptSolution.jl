@@ -217,6 +217,7 @@ function MHLib.calc_objective(sol::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<
         sol.obj_val = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset)
         sol.obj_val_valid = true
     end
+    sol.obj_val = sol.obj_val - (settings[:dist_factor] * sum(sol.d)) - (settings[:stop_factor] * sol.n)
     return sol.obj_val
 end
 
@@ -269,8 +270,6 @@ function MHLib.check(s::OptSolution{Ti, Tf}; kwargs...)::Nothing where {Ti<:Inte
         old_obj = s.obj_val
         invalidate!(s)
         if !isapprox(old_obj, obj(s); rtol=10^-4)
-            println(typeof(old_obj))
-            println(typeof(obj(s)))
             error("Solution has wrong objective value: $old_obj, should be $(obj(s))")
         end
     end
