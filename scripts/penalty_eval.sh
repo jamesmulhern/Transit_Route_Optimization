@@ -2,10 +2,10 @@
 
 # Optimization Setup
 inst_name="Winch_Scenario_1"
-max_iters=1000               # Max iterations to run
-print_freq=25               # Logging interval [iterations]
-route_opt_time=3000         # Combined Route Length [Seconds]
-max_stops=50                # Max number of stops [stops]
+max_iters=1000              # Max iterations to run
+print_freq=24               # Logging interval [iterations]
+route_opt_time=2000         # Combined Route Length [Seconds]
+max_stops=20                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 waiting_time=300            # Passenger waiting time at station [s]
 lim_connect=50              # Limit connections to k nearest stops
@@ -20,18 +20,19 @@ mkdir -p ${res_folder}
 date=$(date '+%Y%m%dT%H%M%S')
 
 # Iteration and process setup
-num_iters=4
+num_iters=5
 num_procs=1
 num_jobs="\j"
 
 echo "Running testing penalty terms"
 ech0 ""
-for stop_f in 100 200 400
-do
-    for dist_f in 1.0 2.0 4.0
-    do
 
-        for ((i=0; i<$num_iters; i++)); do
+for ((i=0; i<$num_iters; i++))
+do
+    for stop_f in 0 100 200 400
+    do
+        for dist_f in 0.0 1.0 2.0 4.0
+        do
             # Limit to num_procs
             while (( ${num_jobs@P} >= $num_procs )); do
                 wait -n
