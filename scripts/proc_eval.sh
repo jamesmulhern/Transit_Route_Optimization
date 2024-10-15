@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Setup
-inst_name="Winch_Inst_Test"
-max_iters=1000              # Max iterations to run
+inst_name="Winch_Case_Study"
+max_iters=1500              # Max iterations to run
 print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=50                # Max number of stops [stops]
@@ -18,13 +18,15 @@ mkdir -p ${res_folder}
 # Get Datestring
 date=$(date '+%Y%m%dT%H%M%S')
 
+num_jobs="\j"
 # Loop over differnt number of processors
-for num_procs in 1 2 4 # 8 16 # Ensure max < # processors
+for num_procs in 1 2 4 8 16 # Ensure max < # processors
 do
     echo Starting test with ${num_procs} processors
 
-    for ((i=0; i<$num_iters; i++))
+    for ((i=0; i<$num_procs; i++))
     do
+        
         #Compute File Names
         ifile="instances/${inst_name}.zip"
         run_log="${res_folder}/${date}_${inst_name}_${i}_${num_procs}.log"
@@ -44,6 +46,12 @@ do
         arg_str+=" --run_config ${config}"
         arg_str+=" --waiting_time ${waiting_time}"
 
+        echo "Starting processor ${i}/${num_proc}"
         julia bin/gvns.jl ${arg_str} &>> ${run_log} &
+    done
+
+    # Wait until all are finished
+    while (( ${num_jobs@P} != 0 )); do
+        wait -n
     done
 done

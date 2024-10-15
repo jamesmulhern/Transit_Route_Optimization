@@ -2,14 +2,14 @@
 
 # Setup
 inst_name="Winch_Scenario_1"
-max_iters=500               # Mat iterations to run
+max_iters=10000              # Mat iterations to run
 print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
-max_stops=50                # Max number of stops [stops]
+max_stops=8                 # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 waiting_time=300            # Passenger waiting time at station [s]
-config=1                    # Method Configuration setting
-lim_connect=50              # Limit connections to k nearest stops
+config=4                    # Method Configuration setting
+lim_connect=1000            # Limit connections to k nearest stops
 
 
 #Compute File Names
@@ -34,7 +34,7 @@ arg_str+=" --limit_connections ${lim_connect}"
 arg_str+=" --run_config ${config}"
 arg_str+=" --waiting_time ${waiting_time}"
 arg_str+=" --dist_factor 0.0"
-arg_str+=" --stop_factor 100.0"
+arg_str+=" --stop_factor 0.0"
 
 
 julia bin/gvns.jl ${arg_str} >> ${run_log}

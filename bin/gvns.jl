@@ -29,6 +29,24 @@ function main(argString::Vector{String})
                 [MHMethod("  bulg1", ls_bulg!, 1), MHMethod(" insert",ls_insert!, 1)],
                 [MHMethod("sh_10-3", shaking!, 3)],
                 consider_initial_sol = true)
+    elseif settings[:run_config] == 2
+        alg = GVNS(sol, 
+                [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                [MHMethod("   swap", ls_1swap!, 1), MHMethod("  bulg1", ls_bulg!, 1), MHMethod(" insert",ls_insert!, 1)],
+                [MHMethod("sh_10-3", shaking!, 3)],
+                consider_initial_sol = true)
+    elseif settings[:run_config] == 3
+        alg = GVNS(sol, 
+                [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                [MHMethod(" insert",ls_insert!, 2), MHMethod("  1swap", ls_1swap!, 2)],
+                [MHMethod("sh_10-3", shaking!, 3)],
+                consider_initial_sol = true)
+    elseif settings[:run_config] == 4
+        alg = GVNS(sol, 
+                [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                [MHMethod("  1swap", ls_1swap!, 2), MHMethod(" insert",ls_insert!, 1)],
+                [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                consider_initial_sol = true)
     else
         error("Not a valid run configuration")
     end
