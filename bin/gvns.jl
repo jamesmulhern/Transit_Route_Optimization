@@ -18,14 +18,15 @@ function main(argString::Vector{String})
     println(get_settings_as_string())
 
     # Init problem
+    println("Loading Instance")
     inst = OptInstance{Int32, Float32}(settings[:ifile], settings[:limit_connections])
+    println("Creating Solution Struct")
     sol = OptSolution(inst)
-    initialize!(sol)
 
     # Select Method Configuration
     if settings[:run_config] == 1
         alg = GVNS(sol, 
-                [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                [MHMethod("   con3", construct3!, div(settings[:max_sol_size], 4))],
                 [MHMethod("  bulg1", ls_bulg!, 1), MHMethod(" insert",ls_insert!, 1)],
                 [MHMethod("sh_10-3", shaking!, 3)],
                 consider_initial_sol = true)
@@ -46,6 +47,24 @@ function main(argString::Vector{String})
                 [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
                 [MHMethod("  1swap", ls_1swap!, 2), MHMethod(" insert",ls_insert!, 1)],
                 [MHMethod("rng_con", construct!, div(settings[:max_sol_size], 4))],
+                consider_initial_sol = true)
+    elseif settings[:run_config] == 5
+        alg = GVNS(sol, 
+                [MHMethod("   con3", construct3!, div(settings[:max_sol_size], 4))],
+                [MHMethod("  1shuf", ls_1shuff!, 1), MHMethod("  1swap", ls_1swap!, 2), MHMethod(" insert",ls_insert!, 2)],
+                [MHMethod("sh_10-3", shaking!, 3)],
+                consider_initial_sol = true)
+    elseif settings[:run_config] == 6
+        alg = GVNS(sol, 
+                [MHMethod("peak_con", peak_const!, 6)],
+                [MHMethod("  1shuf", ls_1shuff!, 1), MHMethod("  1swap", ls_1swap!, 2), MHMethod(" insert",ls_insert!, 2)],
+                [MHMethod("sh_10-3", shaking!, 3)],
+                consider_initial_sol = true)
+    elseif settings[:run_config] == 7
+        alg = GVNS(sol, 
+                [MHMethod("peak_con", peak_const!, 6)],
+                [MHMethod("  1shuf", ls_1shuff!, 1), MHMethod("  1swap", ls_1swap!, 2), MHMethod(" insert",ls_insert!, 2)],
+                [MHMethod("peak_con", peak_const!, 6)],
                 consider_initial_sol = true)
     else
         error("Not a valid run configuration")

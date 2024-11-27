@@ -22,6 +22,11 @@ struct BulgMove{Ti<:Integer} <: Move
     target::Ti
 end
 
+struct ShuffleMove{Ti<:Integer} <: Move 
+    A_idx::Ti 
+    B_idx::Ti 
+end
+
 #const MoveTypes = Union{SwapMove{Ti}, InsertMove{Ti}} where {Ti<:Integer}
 
 #
@@ -72,12 +77,23 @@ function modify_solution!(s::OptSolution{Ti,Tf}, move::InsertMove{Ti}) where {Ti
     s.n += one(Ti)
 end
 
-function apply_move!(s::OptSolution{Ti,Tf}, move::BulgMove) where {Ti<:Integer, Tf<:AbstractFloat}
+function apply_move!(s::OptSolution{Ti,Tf}, move::BulgMove{Ti}) where {Ti<:Integer, Tf<:AbstractFloat}
     cur_idx = s.x[move.idx]
     insert!(s.x, move.idx, s.inst.move_mat[cur_idx, cur_idx, move.target])
     insert!(s.x, move.idx, cur_idx)
 
     #print("m_idx: $(move.idx), m_t:$(move.target), cur_idx:$(cur_idx), node:$(s.inst.move_mat[cur_idx, cur_idx, move.target])")
+
+    update_solution_data!(s)
+    invalidate!(s)
+    return true
+end
+
+function apply_move!(s::OptSolution{Ti,Tf}, move::ShuffleMove{Ti}) where {Ti<:Integer, Tf<:AbstractFloat}
+    A_v = s.x[move.A_idx]
+    B_v = s.x[move.B_idx]
+    s.x[move.A_idx] = B_v
+    s.x[move.B_idx] = A_v
 
     update_solution_data!(s)
     invalidate!(s)
@@ -92,7 +108,7 @@ end
     local_search!(opt_solution, move_list, step_func)
 
 Performs a local_search on the neighborhood provided by moves. Provided step_function allows for choce between 
-first improvement(:first_impr), random move (:rand_impr) or best_improvement (:best_impr).  
+best_improvement (:best_impr), first improvement(:first_impr) or random move (:rand_impr).  
 """
 function local_search!(s::OptSolution{Ti,Tf}, moves::Vector{M}, step_func::Symbol=:first_impr) where {Ti <: Integer, Tf <: AbstractFloat, M<:Move}
 
@@ -129,7 +145,8 @@ function local_search!(s::OptSolution{Ti,Tf}, moves::Vector{M}, step_func::Symbo
         calc_objective(s_mod)
 
         # Check if solution is better
-        if is_better(s_mod, s)
+        if is_better(s_mod, s) && !isapprox(obj(s_mod), obj(s))
+        #if is_better(s_mod, s)
             copy!(s,s_mod)
             found_improve = true
 
@@ -164,6 +181,97 @@ function construct2!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<
     update_solution_data!(s)
     calc_objective(s)
 end
+
+function construct3!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:Integer, Tf<:AbstractFloat}
+    s.x = [901, 398, 1003, 1491, 899,  473]
+    update_solution_data!(s)
+    calc_objective(s)
+end
+
+function peak_const!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:Integer, Tf<:AbstractFloat}
+    empty!(s.x)
+    s.n = 0
+    p1 = (minimum(s.inst.og.x), minimum(s.inst.og.y))
+    p2 = (maximum(s.inst.og.x), maximum(s.inst.og.y))
+    
+    i = 1
+    dup_count = 0
+    while i <= par
+        
+        canidate, _ = get_rng_peak!(s, p1, p2)
+
+        if isnothing(canidate)
+            continue
+        end
+
+        if canidate in s.x
+            # Repeat with new random node
+            i -= 1
+            dup_count += 1
+            if dup_count > 10
+                println("Found existing point 10 times, skipping adding point to solution")
+                i += 1
+            end
+        else
+            # Find Stop location nearest to the canidate
+            stop_idx = findfirst(s.inst.links .== canidate)
+            stop_idx, _ = nn(s.inst.og.kdTree,[s.inst.wg.x[canidate],s.inst.wg.y[canidate]])
+            # if isnothing(stop_idx)
+            #     error("Walking node is not linked to opt graph")
+            # end
+            push!(s.x, stop_idx)
+            dup_count = 0
+        end
+        
+        i += 1
+    end
+
+    update_solution_data!(s)
+    calc_objective(s)
+end
+
+function rand_point(p1::Tuple{Tf,Tf}, p2::Tuple{Tf,Tf}) where {Tf<:AbstractFloat}
+    xRange = p2[1] - p1[1]
+    yRange = p2[2] - p1[2]
+    x = xRange * rand() + p1[1]
+    y = yRange * rand() + p1[2]
+    return [x,y]
+end
+
+function get_rng_peak!(s::OptSolution{Ti,Tf}, p1::Tuple{Tf,Tf}, p2::Tuple{Tf,Tf}) where {Ti <: Integer, Tf<:AbstractFloat}
+
+    # Choose random point 
+    point = rand_point(p1,p2)
+
+    # find nearest point in walk graph
+    next_idx, _ = nn(s.inst.wg.kdTree, point)
+
+    # init vars
+    cur_idx = 0
+    cur_util = zero(Tf)
+    best_util = typemax(Tf)
+
+    # loop until found a local max
+    while cur_util < best_util
+        # Get utility of point
+        cur_idx = next_idx
+        cur_util = s.inst.M[cur_idx]
+
+        # Find all neighbors to node
+        neighbors = findall(s.inst.wg.adj[:,cur_idx])
+        if isempty(neighbors)
+            return nothing, nothing
+        end
+
+        # Get utility of neighbors and find max
+        neighbors_util = s.inst.M[neighbors]
+        best_util, max_idx = findmax(neighbors_util)
+        next_idx = neighbors[max_idx]
+    end
+
+    return cur_idx, cur_util
+end
+
 
 function generate_random_solution!(s::OptSolution{Ti,Tf}, n::Int) where {Ti<:Integer, Tf<:AbstractFloat}
     s.n = n
@@ -221,6 +329,12 @@ function ls_bulg!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:In
     result.changed = local_search!(s, moves, step_func)
 end
 
+function ls_1shuff!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:Integer, Tf<:AbstractFloat}
+    step_func = get_step_func(par)
+    moves = [ShuffleMove{Ti}(idx,target) for idx in 1:s.n, target in 1:s.n][:]
+    result.changed = local_search!(s, moves, step_func)
+end
+
 """
     shaking!(opt_solution, par, result)
 
@@ -271,6 +385,61 @@ function remove!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:Int
     invalidate!(s)
     result.changed = true
     return nothing
+end
+
+function rng_peak!(s::OptSolution{Ti,Tf}, par::Int, result::Result) where {Ti<:Integer, Tf<:AbstractFloat}
+    modified = false
+    for i in 1:par 
+        modified = modified || rng_peak_insert!(s, convert(Ti, rand(1:s.n)))
+    end
+
+    if modified 
+        update_solution_data!(s)
+        invalidate!(s)
+        result.changed = true
+    else
+        result.changed = false
+    end
+
+    return nothing
+end
+
+# Removes a point at idx and insterts a random peak
+function rng_peak_insert!(s::OptSolution{Ti,Tf}, idx::Ti) where {Ti<:Integer, Tf<:AbstractFloat}
+    
+    idx_1 = mod(idx-1, Base.OneTo(s.n))
+    idx_2 = mod(idx+1, Base.OneTo(s.n))
+
+    old_vertex = s.x[idx]
+    s.x[idx] = 0
+
+    p1 = (s.inst.og.x[idx_1], s.inst.og.y[idx_1])
+    p2 = (s.inst.og.x[idx_2], s.inst.og.y[idx_2])
+
+    repeats = 0
+    duplicate = true
+    new_vertex = old_vertex
+    while (repeats < 10) && (duplicate == true)
+        w_idx, _ = get_rng_peak!(s, p1, p2)
+        if isnothing(w_idx)
+            repeats += 1
+            continue
+        end
+        new_vertex, _ = nn(s.inst.og.kdTree, [s.inst.wg.x[w_idx],s.inst.wg.y[w_idx]])
+        duplicate = (new_vertex in s.x)
+        repeats += 1
+    end
+
+    modified = false
+    if duplicate == false
+        s.x[idx] = new_vertex
+        modified = true
+    else
+        s.x[idx] = old_vertex
+        modified = false
+    end
+
+    return modified
 end
 
 function sol_info(s::OptSolution)

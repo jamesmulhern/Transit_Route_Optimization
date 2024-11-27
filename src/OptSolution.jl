@@ -1,6 +1,7 @@
 using MHLib
 using DataFrames, CSV
 using CUDA
+using NearestNeighbors
 
 
 #
@@ -19,13 +20,20 @@ struct OptInstParams{Ti<:Integer, Tf<:AbstractFloat}
     move_k::Ti
 end
 
+struct GraphData{Tf<:AbstractFloat}
+    x::Vector{Tf}
+    y::Vector{Tf}
+    adj::BitMatrix
+    kdTree::NearestNeighbors.NNTree
+end
+
 #
 # MHLib Instance Setup
 # 
 
 struct OptInstance{Ti<:Integer, Tf<:AbstractFloat}
-    n_w::Ti
-    n_r::Ti
+    n_w::Ti                 # Number of walk vertices
+    n_r::Ti                 # Number of route vertices
     d_w::Matrix{Tf}
     d_r::Matrix{Tf}
     d_c::Matrix{Tf}
@@ -35,6 +43,8 @@ struct OptInstance{Ti<:Integer, Tf<:AbstractFloat}
     move_mat::Array{Ti,3}
     offset::Vector{Tf}
     gpu_data::Union{GPUDatasets{Tf}, Nothing}
+    wg::GraphData{Tf}
+    og::GraphData{Tf}
 end
 
 function generate_move_mat(d_r::Matrix{Tf}, n_r::Ti, k::Ti) where {Ti<:Integer, Tf<:AbstractFloat}
@@ -60,22 +70,41 @@ end
 
 
 function OptInstance{Ti, Tf}(filename::String, k::Int=-1) where {Ti<:Integer, Tf<:AbstractFloat}
+    println("Reading Instance")
     base_g, route_g = read_opt_instance(filename)
 
     n_w = convert(Ti, nv(base_g))
     n_r = convert(Ti, nv(route_g))
 
+    println("Computing Shortest Path Matrixes")
     d_w = shortest_paths_from_df(Tf, base_g.edges, n_w)
     d_r = shortest_paths_from_df(Tf, route_g.edges, n_r)
 
     M = convert(Vector{Tf}, base_g.nodes.weight)
     links = convert(Vector{Ti}, route_g.nodes.link_idx)
+    offset = convert(Vector{Tf}, route_g.nodes.offset)
 
+    println("Generating graph datas")
+    adj_mat = falses(n_w,n_w)
+    for row in eachrow(base_g.edges)
+        adj_mat[row.dst,row.src] = true
+    end
+
+    wg = GraphData{Tf}(base_g.nodes.x, base_g.nodes.y, adj_mat, KDTree(vcat(base_g.nodes.x', base_g.nodes.y')))
+
+    adj_og = trues(n_r,n_r)
+    for i in 1:n_r
+        adj_og[i,i] = false
+    end
+    og = GraphData{Tf}(route_g.nodes.x, route_g.nodes.y, adj_og, KDTree(vcat(route_g.nodes.x', route_g.nodes.y')))
+
+    println("Computing Move Matrix")
     k == -1 ? move_k = n_r-2 : move_k = convert(Ti, k)
     move_mat = generate_move_mat(d_r, n_r, move_k)
-    offset = convert(Vector{Tf}, route_g.nodes.offset)
+    
     #access_time = route_g.nodes.offset
 
+    println("Setting up CUDA arrays")
     if CUDA.functional()
         println("Using GPU")
         gpu_data = GPUDatasets(d_w, d_w, M, offset)
@@ -83,7 +112,15 @@ function OptInstance{Ti, Tf}(filename::String, k::Int=-1) where {Ti<:Integer, Tf
         gpu_data = nothing
     end
 
-    inst = OptInstance{Ti,Tf}(n_w, n_r, d_w, d_r, copy(d_w), M, links, move_k, move_mat, offset, gpu_data)
+
+
+    inst = OptInstance{Ti,Tf}(n_w, n_r, 
+                              d_w, d_r, copy(d_w), 
+                              M, links, 
+                              move_k, move_mat, 
+                              offset, 
+                              gpu_data, 
+                              wg, og)
     return inst
 end
 
@@ -95,6 +132,7 @@ mutable struct OptSolution{Ti<:Integer, Tf<:AbstractFloat} <: VectorSolution{Ti}
     inst::OptInstance{Ti,Tf}
     obj_val::Tf
     obj_val_valid::Bool
+    score::Tf
     n::Ti
     x::Vector{Ti}
     d::Vector{Tf}
@@ -104,7 +142,7 @@ end
 
 #Define constuctor for inst input
 function OptSolution(inst::OptInstance{Ti, Tf}) where {Ti<:Integer, Tf<:AbstractFloat}
-    return OptSolution{Ti,Tf}(inst, 0, false, 0, Vector{Ti}(), Vector{Tf}(), Vector{Ti}(), !isnothing(inst.gpu_data))
+    return OptSolution{Ti,Tf}(inst, zero(Tf), false, zero(Tf), zero(Ti), Vector{Ti}(), Vector{Tf}(), Vector{Ti}(), !isnothing(inst.gpu_data))
 end
 
 function Base.show(io::IO, inst::OptInstance{Ti, Tf})  where {Ti<:Integer, Tf<:AbstractFloat}
@@ -122,6 +160,7 @@ function Base.copy!(s1::OptSolution{Ti,Tf}, s2::OptSolution{Ti,Tf}) where {Ti<:I
     s1.inst = s2.inst                           # Copies identifier only
     s1.obj_val = s2.obj_val                     # Copies value
     s1.obj_val_valid = s2.obj_val_valid         # Copies value
+    s1.score = s2.score                         # Copies value
     s1.n = s2.n
     copy!(s1.x, s2.x)                           # Duplicates vectors (allocations?)
     copy!(s1.d, s2.d)
@@ -131,10 +170,10 @@ end
 
 # Does not duplicate the instance, allocates for vectors in solution
 Base.copy(s::OptSolution{Ti,Tf}) where {Ti<:Integer, Tf<:AbstractFloat} =
-    OptSolution{Ti, Tf}(s.inst, s.obj_val, s.obj_val_valid, s.n, copy(s.x), copy(s.d), copy(s.links), s.use_gpu)
+    OptSolution{Ti, Tf}(s.inst, s.obj_val, s.obj_val_valid, s.score, s.n, copy(s.x), copy(s.d), copy(s.links), s.use_gpu)
 
 Base.show(io::IO, s::OptSolution{Ti, Tf}) where {Ti<:Integer, Tf<:AbstractFloat} = 
-    print(io, "Obj: $(round(s.obj_val, digits=1)), Len: $(round(sum(s.d),digits=1)), n: $(s.n), Val: $(s.x)")
+    print(io, "Obj: $(round(s.obj_val, digits=1)), Score: $(round(s.score, digits=1)), Len: $(round(sum(s.d),digits=1)), n: $(s.n), Val: $(s.x)")
 
 
 #
@@ -173,7 +212,7 @@ function generate_t_matrix(s::OptSolution{Ti,Tf}) where {Ti<:Integer, Tf<:Abstra
 
     for i in 1:s.n
         src_idx = findfirst(u_links .== s.links[i])
-        dst_idx = findfirst(u_links .== s.links[mod(i+1,1:s.n)])
+        dst_idx = findfirst(u_links .== s.links[mod(i+1,Base.OneTo(s.n))])
 
         d_t[dst_idx, src_idx] = s.d[i]
     end
@@ -205,19 +244,23 @@ end
 (Re-)calculate the objective value of the given solution and return it.
 """
 function MHLib.calc_objective(sol::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<:AbstractFloat}
+    
+    update_solution_data!(sol)
+
     if sol.n == 0
-        sol.obj_val = compute_obj(sol.inst.d_w, sol.inst.M)
-        sol.obj_val_valid = true 
+        #println("Calcing Obj - Base")
+        sol.score = compute_obj(sol.inst.d_w, sol.inst.M) 
     elseif sol.use_gpu == true
+        #println("Calcing Obj - GPU")
         d_t, u_links = generate_t_matrix(sol)
-        sol.obj_val = compute_obj_gpu(sol.inst.gpu_data, CuArray{Tf}(d_t), CuArray{Ti}(u_links))
-        sol.obj_val_valid = true
+        sol.score = compute_obj_gpu(sol.inst.gpu_data, CuArray{Tf}(d_t), CuArray{Ti}(u_links))
     else
+        #println("Calcing Obj - CPU")
         d_t, u_links = generate_t_matrix(sol)
-        sol.obj_val = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset)
-        sol.obj_val_valid = true
+        sol.score = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset)
     end
-    sol.obj_val = sol.obj_val - (settings[:dist_factor] * sum(sol.d)) - (settings[:stop_factor] * sol.n)
+    sol.obj_val = sol.score - (settings[:dist_factor] * sum(sol.d)) - (settings[:stop_factor] * sol.n)
+    sol.obj_val_valid = true
     return sol.obj_val
 end
 
@@ -278,3 +321,14 @@ end
 function MHLib.Log.get_logger(sol::OptSolution)
     return CustomLogger(settings[:ofile])
 end
+
+
+# """
+#     is_better(::OptSolution, ::OptSolution)
+
+# Return `true` if the first solution is better than the second. Modified to FloatingPoint objective values. 
+# Ensures that the s1 is not within sqrt(eps) of s2
+# """
+# function MHLib.is_better(s1::OptSolution{Ti,Tf}, s2::OptSolution{Ti,Tf}) where {Ti<:Integer, Tf<:AbstractFloat}
+#     to_maximize(s1) ? obj(s1) > obj(s2) + sqrt(eps(Tf)) : obj(s1) < obj(s2) - sqrt(eps(Tf))
+# end

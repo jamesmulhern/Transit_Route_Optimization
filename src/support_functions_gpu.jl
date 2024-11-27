@@ -125,16 +125,17 @@ function update_and_compute!(n::Ti, t::Ti, d_c::CuDeviceMatrix{Tf, 1}, link_node
 
         # Write minimum to matrix
         d_c[d,s] = a
-        loc_obj += (a != 0)*(convert(Tf, inv(a)) * M[d])
+        #loc_obj += (a != 0)*(convert(Tf, inv(a)) * M[d])
+        loc_obj += (s != d)*(convert(Tf, inv(a)) * M[d])
         
         i += total_threads
     end
 
     # Sum loc_obj across warp
-    n = warpsize()
-    while n != 0
-        n = div(n,2)
+    n = div(warpsize(),2)
+    while n > 0
         loc_obj += shfl_down_sync(FULL_MASK, loc_obj, n, warpsize())
+        n = div(n,2)
     end
 
     # Atomic add the local result into result pointer

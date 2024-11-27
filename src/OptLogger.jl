@@ -47,6 +47,9 @@ function Logging.handle_message(logger::CustomLogger,
             save_d[k] = v
         elseif k == :cur_sol
             save_d[k] = v.x
+            save_d[:score] = v.score
+            save_d[:route_distance] = sum(v.d)
+            save_d[:route_length] = v.n
         end
     end
 

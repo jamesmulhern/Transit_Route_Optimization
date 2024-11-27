@@ -10,8 +10,7 @@ function shortest_paths_from_df(::Type{Tf}, edge_data::DataFrame, n::Ti) where {
 
     #Int output
     dist = Array{Tf, 2}(undef, (n,n))
-    fill!(dist, Inf)
-
+    fill!(dist, typemax(Tf))
     # Set edge weights
     for r in eachrow(edge_data)
         dist[r.dst,r.src] = convert(Tf, r.weight) + 1
