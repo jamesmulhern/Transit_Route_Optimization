@@ -2,7 +2,7 @@
 
 # Optimization Setup
 inst_name="Winch_Scenario_1"
-max_iters=1000              # Max iterations to run
+max_iters=5000              # Max iterations to run
 print_freq=24               # Logging interval [iterations]
 route_opt_time=2000         # Combined Route Length [Seconds]
 max_stops=20                # Max number of stops [stops]
@@ -21,11 +21,11 @@ date=$(date '+%Y%m%dT%H%M%S')
 
 # Iteration and process setup
 num_iters=5
-num_procs=1
+num_procs=2
 num_jobs="\j"
 
 echo "Running testing penalty terms"
-ech0 ""
+echo ""
 
 for ((i=0; i<$num_iters; i++))
 do
@@ -59,9 +59,8 @@ do
             arg_str+=" --dist_factor ${dist_f}"
             arg_str+=" --stop_factor ${stop_f}"
 
-            echo -e "\r\033[1A\033[0KRunning dist_f:${dist_f}, stop_f:${stop_f} - Iteration: $(($i+1))/${num_iters} - Procs:${num_procs}"
+            echo "Running dist_f:${dist_f}, stop_f:${stop_f} - Iteration: $(($i+1))/${num_iters} - Procs:${num_procs}"
             julia bin/gvns.jl ${arg_str} &>> ${run_log} &
         done
-        echo ""
     done
 done

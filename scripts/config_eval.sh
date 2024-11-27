@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Optimization Setup
-inst_name="Winch_Inst_Test"
+inst_name="Winch_Scenario_1"
 max_iters=500               # Max iterations to run
 print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]

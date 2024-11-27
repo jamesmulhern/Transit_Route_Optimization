@@ -30,7 +30,7 @@ do
         #Compute File Names
         ifile="instances/${inst_name}.zip"
         run_log="${res_folder}/${date}_${inst_name}_${i}_${num_procs}.log"
-        iter_log="${res_folder}/${date}_${inst_name}_${i}_${num_procss}.json"
+        iter_log="${res_folder}/${date}_${inst_name}_${i}_${num_procs}.json"
 
         # Generate arg_string
         arg_str=""
@@ -46,7 +46,7 @@ do
         arg_str+=" --run_config ${config}"
         arg_str+=" --waiting_time ${waiting_time}"
 
-        echo "Starting processor ${i}/${num_proc}"
+        echo "Starting processor ${i}/${num_procs}"
         julia bin/gvns.jl ${arg_str} &>> ${run_log} &
     done
 
