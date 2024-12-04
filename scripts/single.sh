@@ -2,14 +2,14 @@
 
 # Setup
 inst_name="Winch_Scenario_1"
-max_iters=1000                # Mat iterations to run
+max_iters=500                # Mat iterations to run
 print_freq=1                # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=10                 # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 waiting_time=300            # Passenger waiting time at station [s]
 config=6                    # Method Configuration setting
-lim_connect=1500            # Limit connections to k nearest stops
+lim_connect=500            # Limit connections to k nearest stops
 
 
 #Compute File Names

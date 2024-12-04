@@ -4,7 +4,7 @@
 inst_name="Winch_Scenario_1"
 max_iters=-1                # Max iterations to run
 max_time=1200               # Max Running Time
-print_freq=25               # Logging interval [iterations]
+print_freq=1                # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=10                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
@@ -25,7 +25,7 @@ num_jobs="\j"
 
 echo "Running evaluation of k values"
 echo ""
-for k in 125 250 500 750 1000 1250 1500
+for k in 60 125 250 500 750 1000 1250 1500
 do
 
     for ((i=0; i<$num_iters; i++)); do
