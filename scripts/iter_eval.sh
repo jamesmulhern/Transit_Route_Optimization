@@ -3,13 +3,14 @@
 # Setup
 inst_name="Winch_Case_Study"
 max_iters=30000             # Max iterations to run
+max_time=25000		    # Max running time
 print_freq=100              # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
-max_stops=50                # Max number of stops [stops]
+max_stops=30                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 waiting_time=300            # Passenger waiting time at station [s]
-config=1                    # Method Configuration setting
-lim_connect=50              # Limit connections to k nearest stops
+config=6                    # Method Configuration setting
+lim_connect=1000              # Limit connections to k nearest stops
 
 # Results folder
 res_folder=results/iter_eval
@@ -37,6 +38,7 @@ for ((i=0; i<$num_iters; i++)); do
     arg_str+=" --ifile ${ifile}"
     arg_str+=" --ofile ${iter_log}"
     arg_str+=" --mh_titer ${max_iters}"
+    arg_str+=" --mh_ttime ${max_time}"
     arg_str+=" --mh_lfreq ${print_freq}"
     arg_str+=" --max_sol_length ${route_opt_time}"
     arg_str+=" --max_sol_size ${max_stops}"
@@ -45,7 +47,9 @@ for ((i=0; i<$num_iters; i++)); do
     arg_str+=" --limit_connections ${lim_connect}"
     arg_str+=" --run_config ${config}"
     arg_str+=" --waiting_time ${waiting_time}"
+    arg_str+=" --stop_factor 150"
+    arg_str+=" --dist_factor 2.0"
 
-    echo "Running - Iteration: $(($i+1))/${num_iters} - Procs:${num_procs}"
+    echo "$(date '+%Y%m%dT%H%M%S') - Running - Iteration: $(($i+1))/${num_iters} - Procs:${num_procs}"
     julia bin/gvns.jl ${arg_str} &>> ${run_log} &
 done
