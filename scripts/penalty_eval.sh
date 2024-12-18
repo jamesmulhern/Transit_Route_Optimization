@@ -21,7 +21,7 @@ mkdir -p ${res_folder}
 date=$(date '+%Y%m%dT%H%M%S')
 
 # Iteration and process setup
-num_iters=30
+num_iters=20
 num_procs=2
 num_jobs="\j"
 
@@ -30,7 +30,7 @@ echo ""
 
 for ((i=0; i<$num_iters; i++))
 do
-    for stop_f in 50 100 150 200 300 400
+    for stop_f in 500 600 700 800
     do
         # Limit to num_procs
         while (( ${num_jobs@P} >= $num_procs )); do
@@ -49,6 +49,7 @@ do
         arg_str+=" --ifile ${ifile}"
         arg_str+=" --ofile ${iter_log}"
         arg_str+=" --mh_titer ${max_iters}"
+	arg_str+=" --mh_ttime ${max_time}"
         arg_str+=" --mh_lfreq ${print_freq}"
         arg_str+=" --max_sol_length ${route_opt_time}"
         arg_str+=" --max_sol_size ${max_stops}"
@@ -65,14 +66,14 @@ do
 
     done
 
-    for dist_f in 0.5 1.0 1.5 2.0 3.0 4.0
+    for dist_f in 5.0 6.0 7.0 8.0
     do
         # Limit to num_procs
         while (( ${num_jobs@P} >= $num_procs )); do
             wait -n
         done
 
-        stop_f=0.0
+        stop_f=0
 
         #Compute File Names
         ifile="instances/${inst_name}.zip"
@@ -84,6 +85,7 @@ do
         arg_str+=" --ifile ${ifile}"
         arg_str+=" --ofile ${iter_log}"
         arg_str+=" --mh_titer ${max_iters}"
+	arg_str+=" --mh_ttime ${max_time}"
         arg_str+=" --mh_lfreq ${print_freq}"
         arg_str+=" --max_sol_length ${route_opt_time}"
         arg_str+=" --max_sol_size ${max_stops}"
