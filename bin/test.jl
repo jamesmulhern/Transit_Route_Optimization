@@ -13,22 +13,35 @@ function main(argString::Vector{String})
     parse_settings!([MHLib.all_settings_cfgs..., opt_settings_cfg],Vector{String}())
     # Init problem
     println("Loading Instance")
-    inst = OptInstance{Int32, Float32}(file, 50)
+    inst = OptInstance{Int32, Float32}(file, 500)
     println("Creating Solution Struct")
     sol = OptSolution(inst)
     sol.use_gpu = false
 
     update_solution_data!(sol)
-    println("obj_1: $(obj(sol))")
+    println("obj_pre: $(obj(sol))")
 
-    sol.x = [901, 398]
+    sol.x = [1135,1128,771,1427,1053,652,693,163,266,1340]
     invalidate!(sol)
     println("sol: $(sol.x)")
     println("obj_cpu: $(obj(sol))")
 
-    sol.use_gpu = true
-    invalidate!(sol)
-    println("obj_gpu: $(obj(sol))")
+    base = [1135,1128,771,1427,1053,652,693,163,266,1340]
+    util = inst.M[inst.links[base]]
+    println("base sol: $(base)")
+    println("util vals: $(util)")
+    for i in 1:10
+        new = copy(base)
+        deleteat!(new, i)
+        sol.x = new
+        invalidate!(sol)
+        println("\niter: $i")
+        println("sol: $(sol.x)")
+        println("obj_cpu: $(obj(sol))")
+    end
+    # sol.use_gpu = true
+    # invalidate!(sol)
+    # println("obj_gpu: $(obj(sol))")
 
 
     # Select Method Configuration

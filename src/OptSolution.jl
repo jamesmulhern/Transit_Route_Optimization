@@ -38,7 +38,7 @@ struct OptInstance{Ti<:Integer, Tf<:AbstractFloat}
     d_r::Matrix{Tf}
     d_c::Matrix{Tf}
     M::Vector{Tf}
-    links::Vector{Tf}
+    links::Vector{Ti}
     move_k::Ti
     move_mat::Array{Ti,3}
     offset::Vector{Tf}
