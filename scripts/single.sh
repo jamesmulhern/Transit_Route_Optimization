@@ -2,7 +2,7 @@
 
 # Setup
 inst_name="Winch_Scenario_1"
-max_iters=500                # Mat iterations to run
+max_iters=100                # Mat iterations to run
 print_freq=1                # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=10                 # Max number of stops [stops]

@@ -253,11 +253,12 @@ function MHLib.calc_objective(sol::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<
     elseif sol.use_gpu == true
         #println("Calcing Obj - GPU")
         d_t, u_links = generate_t_matrix(sol)
-        sol.score = compute_obj_gpu(sol.inst.gpu_data, CuArray{Tf}(d_t), CuArray{Ti}(u_links))
+        offset = sol.inst.offset[sol.x]
+        sol.score = compute_obj_gpu(sol.inst.gpu_data, CuArray{Tf}(d_t), CuArray{Ti}(u_links), CuArray{Tf}(offset))
     else
         #println("Calcing Obj - CPU")
         d_t, u_links = generate_t_matrix(sol)
-        sol.score = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset)
+        sol.score = compute_obj(sol.inst.d_w, sol.inst.M, d_t, u_links, sol.inst.d_c, sol.inst.offset[sol.x])
     end
     sol.obj_val = sol.score - (settings[:dist_factor] * sum(sol.d)) - (settings[:stop_factor] * sol.n)
     sol.obj_val_valid = true

@@ -127,8 +127,7 @@ function compute_obj(d_w::Matrix{Tf}, M::Vector{Tf}, d_t::Matrix{Tf}, link_nodes
     # Write d_t into d_c matrix
     for s in 1:t
         for d in 1:t
-            #d_c[link_nodes[d],link_nodes[s]] = min(d_t[d,s],d_c[link_nodes[d],link_nodes[s]])
-            d_c[link_nodes[d],link_nodes[s]] = d_t[d,s] + offset[s] + offset[d] + settings[:waiting_time] #+ headway
+            d_c[link_nodes[d],link_nodes[s]] = d_t[d,s] + offset[s] + offset[s] + settings[:waiting_time]
         end
     end
 

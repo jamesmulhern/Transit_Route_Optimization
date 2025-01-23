@@ -147,7 +147,7 @@ function update_and_compute!(n::Ti, t::Ti, d_c::CuDeviceMatrix{Tf, 1}, link_node
 end
 
 
-function compute_obj_gpu(gpu_data::GPUDatasets{Tf}, d_t::CuArray{Tf, 2, CUDA.DeviceMemory}, link_nodes::CuArray{Ti, 1, CUDA.DeviceMemory}) where {Ti<:Integer, Tf<:AbstractFloat}
+function compute_obj_gpu(gpu_data::GPUDatasets{Tf}, d_t::CuArray{Tf, 2, CUDA.DeviceMemory}, link_nodes::CuArray{Ti, 1, CUDA.DeviceMemory}, offset::CuArray{Tf, 1, CUDA.DeviceMemory}) where {Ti<:Integer, Tf<:AbstractFloat}
 
     # TODO make this configurable in some way
     threads = 640
@@ -157,7 +157,7 @@ function compute_obj_gpu(gpu_data::GPUDatasets{Tf}, d_t::CuArray{Tf, 2, CUDA.Dev
     d_w = gpu_data.d_w
     d_c = gpu_data.d_c
     M = gpu_data.M
-    offset = gpu_data.offset
+    #offset = gpu_data.offset  # Offset now passed into function
 
     # Compute sizes
     n = convert(Ti, size(d_w)[1])
