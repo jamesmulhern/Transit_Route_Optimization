@@ -43,7 +43,7 @@ do
         arg_str+=" --ifile ${ifile}"
         arg_str+=" --ofile ${iter_log}"
         arg_str+=" --mh_titer ${max_iters}"
-        arg_str+=" --mg_ttime ${max_tim}"
+        arg_str+=" --mh_ttime ${max_time}"
         arg_str+=" --mh_lfreq ${print_freq}"
         arg_str+=" --max_sol_length ${route_opt_time}"
         arg_str+=" --max_sol_size ${max_stops}"
