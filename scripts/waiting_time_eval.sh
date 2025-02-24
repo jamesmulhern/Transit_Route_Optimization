@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Optimization Setup
-inst_name="Winch_Scenario_1"
+inst_name="Winch_Case_Study"
 max_iters=1200              # Max iterations to run
 print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
-max_stops=10                # Max number of stops [stops]
+max_stops=16                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 config=6                    # Method Configuration setting
 lim_connect=1000            # Limit connections to k nearest stops
