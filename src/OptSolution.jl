@@ -298,6 +298,14 @@ function is_valid(s::OptSolution{Ti, Tf})  where {Ti<:Integer, Tf<:AbstractFloat
         valid = valid && (sum(s.d) + s.n * settings[:dwell_time]) <= settings[:max_comb_length]
     end
 
+    # Check if there are repeating vertexs
+    if settings[:allow_repeats] == false
+        x_sort = sort(s.x)
+        for i in 2:s.n
+            valid = valid && (x_sort[i-1] != x_sort[i])
+        end
+    end
+
     return valid
 end
 

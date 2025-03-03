@@ -35,6 +35,7 @@ arg_str+=" --run_config ${config}"
 arg_str+=" --waiting_time ${waiting_time}"
 arg_str+=" --dist_factor 0.0"
 arg_str+=" --stop_factor 0.0"
+arg_str+=" --allow_repeats true"
 
 
 julia bin/gvns.jl ${arg_str} | tee ${run_log}

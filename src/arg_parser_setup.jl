@@ -42,4 +42,8 @@ opt_settings_cfg = ArgParseSettings()
     help = "Scale factor to add a penalty term propotional to the number of stops"
     arg_type = Float32
     default = zero(Float32)
+    "--allow_repeats"
+    help = "Boolean to trigger if repeats of the same stop are allowed or not"
+    arg_type = Bool
+    default = true
 end
