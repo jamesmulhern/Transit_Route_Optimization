@@ -3,7 +3,7 @@
 # Optimization Setup
 inst_name="Winch_Case_Study"
 max_iters=1200              # Max iterations to run
-max_time=7200
+max_time=14400
 print_freq=25               # Logging interval [iterations]
 route_opt_time=3000         # Combined Route Length [Seconds]
 #max_stops=10                # Max number of stops [stops]
@@ -26,7 +26,7 @@ num_jobs="\j"
 
 echo "Running evaluation of different number of stops"
 echo ""
-for n_stop in 6 8 10 12 18 24 30
+for n_stops in 6 8 10 12 18 24 30
 do
 
     for ((i=0; i<$num_iters; i++)); do
@@ -37,8 +37,8 @@ do
 
         #Compute File Names
         ifile="instances/${inst_name}.zip"
-        run_log="${res_folder}/${date}_${inst_name}_${wt}_${i}.log"
-        iter_log="${res_folder}/${date}_${inst_name}_${wt}_${i}.json"
+        run_log="${res_folder}/${date}_${inst_name}_${n_stops}_${i}.log"
+        iter_log="${res_folder}/${date}_${inst_name}_${n_stops}_${i}.json"
 
         # Generate arg_string
         arg_str=""
