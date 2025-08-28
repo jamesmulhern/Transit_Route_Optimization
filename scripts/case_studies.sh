@@ -25,7 +25,7 @@ num_procs=8
 num_jobs="\j"
 
 echo "Running evaluation of different scenarios"
-ech0 ""
+echo ""
 for inst_name in Winch_Scenario_1 Winch_Scenario_2 Winch_Scenario_3 Winch_Case_Study
 do
 

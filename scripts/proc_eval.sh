@@ -2,10 +2,10 @@
 
 # Setup
 inst_name="Winch_Case_Study"
-max_iters=1500              # Max iterations to run
-max_time=900
+max_iters=3000              # Max iterations to run
+max_time=1800
 print_freq=25               # Logging interval [iterations]
-route_opt_time=2000         # Combined Route Length [Seconds]
+route_opt_time=3000         # Combined Route Length [Seconds]
 max_stops=10                # Max number of stops [stops]
 dwell_time=20               # Stopping time at each station [s]
 waiting_time=300            # Passenger waiting time at station [s]
